@@ -1,0 +1,47 @@
+name: Auto Build & Release APK (arm64)
+
+on:
+  push:
+    branches: [ main ]   # 当 fork 自动同步 upstream 时触发
+  workflow_dispatch:      # 允许手动触发
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.0"   # 用最新稳定版，解决 intl 冲突
+          cache: true
+
+      - name: Flutter Pub Get
+        working-directory: simple_live_app
+        run: flutter pub get
+
+      - name: Build APK (arm64-v8a)
+        working-directory: simple_live_app
+        run: flutter build apk --release --target-platform android-arm64
+
+      - name: Upload Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: "v${{ github.run_number }}"
+          name: "Auto Release ${{ github.run_number }}"
+          body: "自动构建版本（arm64-v8a），来源于 upstream 更新或手动触发。"
+          artifacts: "simple_live_app/build/app/outputs/flutter-apk/app-release.apk"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
